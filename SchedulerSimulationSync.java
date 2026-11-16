@@ -4,9 +4,9 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Random;
-
-import java.util.concurrent.Semaphore;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.Semaphore;
+
 // ANSI Color Codes for enhanced terminal output (same as Assignment 1)
 class Colors {
     public static final String RESET = "\u001B[0m";
@@ -116,7 +116,6 @@ class SharedStats {
 }
 
 // ⚠️ THE READY QUEUE: shared by ALL the CPU threads ⚠️
-// ⚠️ THE READY QUEUE: shared by ALL the CPU threads ⚠️
 class ReadyQueue {
     private final LinkedList<Thread> list = new LinkedList<>();
     private final Map<Thread, Process> map = new HashMap<>();
@@ -141,7 +140,7 @@ class ReadyQueue {
         } finally {
             queueLock.unlock();
         }
-        // Signal that one more process is available
+        // Feature 3: Signal that one more process is available
         availableProcesses.release();
     }
 
@@ -191,6 +190,7 @@ class ReadyQueue {
         }
     }
 }
+
 class Process implements Runnable {
     private final String name;
     private final int burstTime;
@@ -331,8 +331,7 @@ class CpuWorker extends Thread {
 
 public class SchedulerSimulationSync {
     public static void main(String[] args) {
-        // ⚠️ IMPORTANT: Put your student ID here to seed the random number generator
-        int studentID = 444051957;  // ← CHANGE THIS TO YOUR ACTUAL STUDENT ID
+        int studentID = 444051957;
 
         Random random = new Random(studentID);
 
