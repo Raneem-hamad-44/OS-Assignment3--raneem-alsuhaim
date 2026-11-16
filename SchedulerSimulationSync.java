@@ -6,7 +6,7 @@ import java.util.HashMap;
 import java.util.Random;
 
 import java.util.concurrent.Semaphore;
-
+import java.util.concurrent.locks.ReentrantLock;
 // ANSI Color Codes for enhanced terminal output (same as Assignment 1)
 class Colors {
     public static final String RESET = "\u001B[0m";
