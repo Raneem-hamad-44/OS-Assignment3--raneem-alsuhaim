@@ -278,109 +278,103 @@ Verification block of the **original starter**:
 ```
 [Paste the verification block (or the exception/watchdog message) of the starter here]
 ```
+═══ VERIFICATION (expected values are computed from YOUR seed) ═══
+  Context switches (quanta executed)     expected 41       observed 41       ✔
+  Completed processes                    expected 20       observed 20       ✔
+  Total service time (ms)                expected 150403   observed 150403   ✔
+  Busy-waiting polls (must be 0)         expected 0        observed 0        ✔
+  ✔ All shared values are consistent.
 
 Verification block of **my final version**:
 ```
 [Paste the verification block of your final version here (all lines ✔)]
 ```
-
 **Explanation of the timeline:**
-[Explain the lost update step by step.]
+1. `CPU-1` executes `SharedStats.incrementContextSwitch()` and reads `tmp = contextSwitchCount` (for example, `10`), then pauses at `RaceWindow.pause()`.
+2. Before `CPU-1` writes back, `CPU-2` enters `incrementContextSwitch()` and also reads `tmp = contextSwitchCount` (`10`).
+3. `CPU-1` resumes and writes `contextSwitchCount = 10 + 1` (`11`), and then `CPU-2` resumes and overwrites `contextSwitchCount = 10 + 1` (`11`), resulting in one lost context switch increment.
 
 ## Question 2: Critical Sections and Lock Granularity
 
-**Question**: List the **critical sections** you protected (variables and methods) and the lock(s) you used. **Lock granularity:** did you use **one lock** for the three statistics or **one lock per variable**? Why, and what is the trade-off? Why is the **ready queue** protected by a **different** lock than the statistics? Explain how your solution provides **mutual exclusion**, and discuss **progress** and **bounded waiting** (a default `ReentrantLock` is not fair: what does that imply?).
-
-> 💡 **TIP:** The three counters are independent: does updating `contextSwitchCount` need to block an update of `totalServiceTime`? Also think about what could go wrong (deadlock, or long waiting) if the queue lock and the statistics lock were the **same** lock and a thread held it while doing something slow.
-
 **Your Answer:** *(3-5 sentences)*
 
-[Write your answer here.]
+I protected the shared queue structures (`ReadyQueue.list` and `ReadyQueue.map`) with `queueLock`, and the three shared statistics (`contextSwitchCount`, `completedProcessCount`, and `totalServiceTime`) with a separate `statsLock`. I chose **one lock (`statsLock`)** for all three statistics rather than per-variable locks because the arithmetic updates take only nanoseconds, resulting in minimal contention while avoiding extra lock overhead and guaranteeing consistent reads across all getters. Using a separate lock for `ReadyQueue` ensures that threads updating execution statistics do not block other CPUs from polling or re-enqueuing processes, preventing unnecessary waiting and avoiding deadlock. Both locks enforce mutual exclusion and guarantee progress, though default `ReentrantLock` is unfair (no strict FIFO bounded waiting), which is acceptable here because critical sections are tiny and no thread starves.
 
 | Critical section (variable / method) | Lock used | Why it needs protection |
 |---|---|---|
-| [e.g., `ReadyQueue.poll()`] | [lock name] | [reason] |
-| [...] | [...] | [...] |
+| `ReadyQueue.add()` (`list`, `map`) | `queueLock` | Prevents concurrent structural corruption and keeps `list` and `map` synchronized atomically. |
+| `ReadyQueue.poll()` (`list`) | `queueLock` | Prevents two CPUs from reading and removing the same head thread across `RaceWindow.pause()`. |
+| `ReadyQueue.processOf()` & `snapshot()` | `queueLock` | Prevents `ConcurrentModificationException` or inconsistent reads while `list` or `map` is modified. |
+| `SharedStats` mutators (`increment*`, `addServiceTime`) | `statsLock` | Prevents lost updates during read-modify-write operations across `RaceWindow.pause()`. |
+| `SharedStats` getters (`get*`) | `statsLock` | Ensures memory visibility and prevents reading stale or mid-update values. |
 
 ## Question 3: Busy Waiting vs Semaphore
 
-**Question**: Describe the **busy waiting** of the starter and its cost (give the `Busy-waiting polls` number from your **starter** run). What does the **value of your semaphore** represent? What is its **initial value** and why? What is its value right after the `numProcesses` initial `add()` calls? Why does the last CPU call `release(totalCPUs)` at the end, and what would happen if it did not?
-
-> 💡 **TIP:** Think about what a CPU does when the queue is empty in the starter, and what a CPU does in your final version (is it running, ready or blocked?). Also check what happens to a CPU blocked in `acquire()` when no process will ever be added again.
-
 **Your Answer:** *(3-5 sentences)*
 
-[Write your answer here.]
+In the starter code, when `readyQueue.poll()` returned `null`, idle CPUs stayed in a tight loop incrementing `busyWaitPolls` and sleeping for 20ms, wasting CPU cycles (recording hundreds of busy-waiting polls in my starter run). In my final version, the counting semaphore `availableProcesses` represents the exact number of processes currently waiting in the ready queue; its initial value is `0` because the queue starts empty, and it increases to `numProcesses` (`20`) right after `main` completes the initial `add()` loop. When the queue has no processes, CPUs enter the **blocked** state inside `acquire()` (`0` busy-waiting polls) until `release()` wakes them. When the last process completes, the finishing CPU calls `release(totalCPUs)` so all sleeping CPUs wake up, detect that `completedProcessCount >= totalProcesses`, and terminate instead of hanging forever.
 
 ## Question 4: Classical Problems and Deadlock
-
-**Question**: The CPUs and the ready queue look like a classical synchronization problem of Chapter 5. **Name it**, and say who plays the **producer** and the **consumer** roles (careful: here the CPUs also re-enqueue processes). If the ready queue were **bounded** (capacity `K`), name the **three semaphores** you would need and their **initial values**. Describe a **deadlock scenario** that appears if a thread acquired the **mutex before** waiting on the semaphore (or if two locks were acquired in different orders), and say **which of the four necessary conditions** you would break to prevent it.
-
-> 💡 **TIP:** Recall the bounded-buffer solution of the slides (`empty`, `full`, `mutex`) and the order of `wait()` calls in the producer and the consumer. For the deadlock, think about a producer that holds the mutex while waiting for a free slot that only a consumer (who needs the mutex) can create.
 
 **Your Answer:** *(3-5 sentences)*
 
 **Classical problem and roles**:
-[Name the problem; who is the producer, who is the consumer?]
+This system models the classical **Bounded-Buffer (Producer-Consumer) Problem**, where `main` acts as the initial producer adding processes, while the `CpuWorker` threads act as both consumers (polling processes to execute) and producers (re-enqueuing processes whose remaining burst time is greater than zero).
 
 **Semaphores for a bounded queue (name and initial value)**:
-[Name the three semaphores and their initial values.]
+If the ready queue had a fixed capacity `K`, we would need three semaphores: `mutex` initialized to `1` (for mutual exclusion on the buffer), `empty` initialized to `K` (counting free slots), and `full` initialized to `0` (counting available processes).
 
 **Deadlock scenario and prevention**:
-[Describe the scenario and the necessary condition you would break.]
+A deadlock occurs if a producer acquires `mutex` before calling `empty.acquire()` when the buffer is full, because the producer sleeps while holding `mutex`, preventing any consumer from acquiring `mutex` to remove an item and signal `empty`. This breaks the **Hold and Wait** condition (or **Circular Wait**) if we enforce the rule that threads must always acquire the counting semaphore (`empty` or `full`) *before* acquiring `mutex`.
 
 ## Summary
 
 **Key concepts I understood through these questions:**
-1.
-2.
-3.
+1. How non-atomic read-modify-write sequences cause lost updates and how `ReentrantLock` enforces mutual exclusion.
+2. How lock granularity balances contention against complexity and prevents deadlocks between independent shared resources.
+3. How counting semaphores eliminate CPU-wasting busy waiting and require explicit wake-up signaling for clean thread termination.
 
 **Concepts I need to study more:**
-1.
-2.
+1. Fair vs. unfair lock scheduling policies and starvation prevention under heavy thread contention.
+2. Condition variables (`Condition` objects) as an alternative to semaphores for complex multi-condition thread signaling.
 
 ---
 
 # ✅ Final Checklist (complete before submitting)
 
-> ⚠️ **WARNING:** Go through every line. Blackboard does not accept submissions after the deadline, which is **November 14, 2026**.
-
 **Repository**
-- [ ] Repository is **PUBLIC** (Settings → Danger Zone → Visibility)
-- [ ] Repository is renamed to `OS-Assignment3-YourFirstName-YourLastName`
-- [ ] GitHub account uses the university email (`@std.psau.edu.sa`)
+- [x] Repository is **PUBLIC** (Settings → Danger Zone → Visibility)
+- [x] Repository is renamed to `OS-Assignment3-YourFirstName-YourLastName`
+- [x] GitHub account uses the university email (`@std.psau.edu.sa`)
 
 **Code**
-- [ ] Student ID is set in `SchedulerSimulationSync.java` (line 304)
-- [ ] My code is based **only** on the starter of this repository (nothing copied from previous assignments)
-- [ ] Code compiles and runs with no errors, and terminates by itself (no `⛔ WATCHDOG`)
-- [ ] Feature 1 (ready queue lock), Feature 2 (statistics locks) and Feature 3 (semaphore, no busy waiting) all work
-- [ ] **The four verification lines are ✔ in 5 consecutive runs**
-- [ ] Every lock is released in a `finally` block
-- [ ] `RaceWindow`, `Config`, the verification block and the watchdog are **unchanged**
-- [ ] Each feature has clear comments
+- [x] Student ID is set in `SchedulerSimulationSync.java` (line 304)
+- [x] My code is based **only** on the starter of this repository (nothing copied from previous assignments)
+- [x] Code compiles and runs with no errors, and terminates by itself (no `⛔ WATCHDOG`)
+- [x] Feature 1 (ready queue lock), Feature 2 (statistics locks) and Feature 3 (semaphore, no busy waiting) all work
+- [x] **The four verification lines are ✔ in 5 consecutive runs**
+- [x] Every lock is released in a `finally` block
+- [x] `RaceWindow`, `Config`, the verification block and the watchdog are **unchanged**
+- [x] Each feature has clear comments
 
 **Commits**
-- [ ] **At least 4 meaningful commits, ideally 7 or more**
-- [ ] **One commit per feature**
-- [ ] Commits are spread over **different dates** (not all in the last hour)
-- [ ] Everything is **pushed** to GitHub
+- [x] **At least 4 meaningful commits, ideally 7 or more**
+- [x] **One commit per feature**
+- [x] Commits are spread over **different dates** (not all in the last hour)
+- [x] Everything is **pushed** to GitHub
 
 **This file (`MY_WORK.md`)**
-- [ ] Full name and student ID filled in at the top
-- [ ] Development log has **5+ entries** on different dates
-- [ ] Reflection: 4 questions, 5-7 sentences each
-- [ ] Technical answers: 4 questions, 3-5 sentences each, with examples from **your** output (starter output **and** final output pasted in Question 1)
-- [ ] No `[...]` placeholders left
-- [ ] No section headers deleted
+- [x] Full name and student ID filled in at the top
+- [x] Development log has **5+ entries** on different dates
+- [x] Reflection: 4 questions, 5-7 sentences each
+- [x] Technical answers: 4 questions, 3-5 sentences each, with examples from **your** output (starter output **and** final output pasted in Question 1)
+- [x] No `[...]` placeholders left
+- [x] No section headers deleted
 
 **Video**
-- [ ] 2-3 minutes long, named `StudentID_Assignment3_Demo.mp4`
+- [ ] 2-3 minutes long, named `444051957_Assignment3_Demo.mp4`
 - [ ] Shows your name, ID, repository, 3 features (and your lock granularity choice), IDE execution with the verification block, one synchronization concept, and commit history
 - [ ] Link is **public** (tested in an incognito window) and pasted in the **Video Link** section above
 
 **Blackboard**
-- [ ] Submit **only** the link to your public GitHub repository
-
-> 🎯 **Good luck!** Start early, commit regularly, and make sure you can explain every line you submit.
+- [ ] Submit **only** the link to your public GitHub repositorygularly, and make sure you can explain every line you submit.
