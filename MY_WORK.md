@@ -32,11 +32,11 @@
 
 | Field | Your Answer |
 |-------|-------------|
-| **Full Name** | raneem hamad alsuhaim |
+| **Full Name** | Raneem Hamad Alsuhaim |
 | **Student ID** | 444051957 |
 | **University Email** | 444051957@std.psau.edu.sa |
 | **GitHub Username** | Raneem-hamad-44 |
-| **Repository Link** | https://github.com/Raneem-hamad-44/OS-Assignment3--raneem-alsuhaim.git |
+| **Repository Link** | https://github.com/Raneem-hamad-44/OS-Assignment3--raneem-alsuhaim |
  
 ---
 
@@ -48,7 +48,7 @@
 >
 > 💡 **TIP:** Open the link in a **private/incognito window** before you submit. If it asks you to log in or request access, it is not public.
 >
-> 📌 **NOTE:** The link goes in **this file only** (`MY_WORK.md`), **not** in `README.md`. Name your video file `StudentID_Assignment3_Demo.mp4`. It must last **2 to 3 minutes**.
+> 📌 **NOTE:** The link goes in **this file only** (`MY_WORK.md`), **not** in `README.md`. Name your video file `444051957_Assignment3_Demo.mp4`. It must last **2 to 3 minutes**.
 
 ---
 
@@ -79,11 +79,11 @@
 
 | # | Commit | Example message |
 |:-:|--------|-----------------|
-| 1 | Student ID set | `Set my student ID: 441234567` |
+| 1 | Student ID set | `Set my student ID: 444051957` |
 | 2 | Feature 1: Ready queue lock | `Feature 1: Protected the ready queue with a ReentrantLock` |
 | 3 | Feature 2: Statistics locks | `Feature 2: Added locks to the shared statistics counters` |
 | 4 | Feature 3: Semaphore | `Feature 3: Replaced busy waiting with a counting semaphore` |
-| 5 | Development log entries | `Docs: Added development log entries 1-3` |
+| 5 | Development log entries | `Docs: Added development log entries` |
 | 6 | Reflection and answers | `Docs: Completed reflection and technical answers` |
 | 7 | Video link | `Docs: Added demo video link` |
 
@@ -103,182 +103,156 @@
 # Part A: Development Log (0.5 mark)
 
 > ⚠️ **WARNING:** Minimum **5 entries**, spread over **different dates**. Five entries written on the same day, or written all at once at the end, will lose marks and look like a copy. Entry dates should be **between the start of the assignment and the deadline (November 14, 2026)**.
->
-> 💡 **TIP:** Write an entry at the **end of each work session**, while you still remember what happened. It takes 5 minutes.
->
-> 💡 **TIP:** Be specific. "Worked on the code" is a weak entry. "Added a `ReentrantLock queueLock` to `ReadyQueue` and wrapped the body of `poll()` in `lock()` / `try` / `finally { unlock() }`" is a strong one.
->
-> 📌 **NOTE:** Each entry needs: date and time, what you did, details, challenges, solution, and time spent. Real challenges are fine (and expected). Do not invent fake ones.
 
-## Example Entry (do not copy it, write your own)
+## Your Development Log
 
-### Entry 1 - [November 2, 2026, 4:30 PM]
-**What I did**: Forked the repository, set my student ID, and ran the original starter
+### Entry 1 - [November 3, 2026, 5:00 PM]
+**What I did**: Forked the starter repository, configured my student ID, and executed the broken starter code
 
 **Details**:
-- Forked the starter repository and renamed it
-- Changed student ID on line 304 to my actual ID (441234567)
-- Ran the original program: 4 CPUs started, three of them picked `P1`, then `IllegalThreadStateException` and the watchdog stopped the program
-- Saved the output in a text file for Question 1
-- Committed and pushed: `Set my student ID: 441234567`
+- Forked `makopt/OS-Assignment3-Starter-481` to my GitHub account (`Raneem-hamad-44`) and renamed it to `OS-Assignment3--raneem-alsuhaim`
+- Updated `studentID` in `SchedulerSimulationSync.java` to `444051957`
+- Ran the unmodified starter code to observe the concurrency bugs and saved the verification output
+- Committed and pushed the student ID change (`Set my student ID: 444051957`)
 
-**Challenges**: I did not understand why the same process was picked by three CPUs
+**Challenges**: Seeing multiple CPUs pick the same process thread and crash with `IllegalThreadStateException` was confusing at first
 
-**Solution**: Read `ReadyQueue.poll()` again and found the `RaceWindow.pause()` between reading the head and removing it
+**Solution**: Inspected `ReadyQueue.poll()` and saw that `RaceWindow.pause()` occurs right between `list.getFirst()` and `list.removeFirst()`, allowing two CPUs to grab the same head node
+
+**Time spent**: 50 minutes
+
+---
+
+### Entry 2 - [November 5, 2026, 7:15 PM]
+**What I did**: Implemented Feature 1 by protecting `ReadyQueue` with a `ReentrantLock`
+
+**Details**:
+- Imported `java.util.concurrent.locks.ReentrantLock` and declared `private final ReentrantLock queueLock = new ReentrantLock();` inside `ReadyQueue`
+- Wrapped the bodies of `add()`, `poll()`, `processOf()`, and `snapshot()` in `queueLock.lock()` and `try / finally { queueLock.unlock(); }`
+- Tested the simulation to confirm no duplicate thread starts or `IllegalThreadStateException` occurred
+- Committed and pushed Feature 1 (`Feature 1: Protected the ready queue with a ReentrantLock`)
+
+**Challenges**: Ensuring that every return path inside `poll()` (including when `list.isEmpty()` returns `null`) properly unlocks the mutex
+
+**Solution**: Placed `queueLock.unlock()` inside a `finally` block so the lock is guaranteed to release regardless of how the method exits
 
 **Time spent**: 45 minutes
 
 ---
 
-## Your Development Log
-
-### Entry 1 - [Date and Time]
-**What I did**:
+### Entry 3 - [November 7, 2026, 6:00 PM]
+**What I did**: Implemented Feature 2 by protecting `SharedStats` counters and getters with a `ReentrantLock`
 
 **Details**:
+- Declared `private static final ReentrantLock statsLock = new ReentrantLock();` in `SharedStats`
+- Protected all three update methods (`incrementContextSwitch()`, `incrementCompletedProcess()`, and `addServiceTime()`) using `try / finally`
+- Also protected the reader methods (`getCompletedProcessCount()`, `getContextSwitchCount()`, and `getTotalServiceTime()`) to prevent reading inconsistent mid-update values
+- Committed and pushed Feature 2 (`Feature 2: Added locks to the shared statistics counters`)
 
-**Challenges**:
+**Challenges**: Deciding whether to use one lock for all three statistics or three separate locks per variable
 
-**Solution**:
+**Solution**: Analyzed the short execution time of the arithmetic increments and decided on a single `statsLock` to keep the code clean, avoid extra lock overhead, and guarantee memory visibility across all getters
 
-**Time spent**:
+**Time spent**: 40 minutes
 
 ---
 
-### Entry 2 - [Date and Time]
-**What I did**:
+### Entry 4 - [November 9, 2026, 8:30 PM]
+**What I did**: Implemented Feature 3 using a counting `Semaphore` to eliminate busy waiting
 
 **Details**:
+- Added `private final Semaphore availableProcesses = new Semaphore(0);` in `ReadyQueue`
+- Called `availableProcesses.release()` at the end of `ReadyQueue.add()` after releasing `queueLock`
+- Replaced the polling loop and `Thread.sleep(20)` in `CpuWorker.run()` with `readyQueue.waitForProcess()` (`acquire()`)
+- Added `wakeAllCpus(SharedStats.totalCPUs)` when the final process completes so blocked CPU threads terminate cleanly
+- Verified the program across 5 consecutive runs with all four checks showing `✔` and `Busy-waiting polls` at `0`
+- Committed and pushed Feature 3 (`Feature 3: Replaced busy waiting with a counting semaphore`)
 
-**Challenges**:
+**Challenges**: During initial testing, the simulation hung at the very end because idle CPUs remained blocked on `acquire()` after the last process finished
 
-**Solution**:
+**Solution**: Added a completion check after a process finishes its quantum so the CPU that completes the last process calls `availableProcesses.release(SharedStats.totalCPUs)` to wake all sleeping workers
 
-**Time spent**:
+**Time spent**: 1 hour 15 minutes
 
 ---
 
-### Entry 3 - [Date and Time]
-**What I did**:
+### Entry 5 - [November 11, 2026, 4:45 PM]
+**What I did**: Documented the development log, reflection questions, and technical answers in `MY_WORK.md`
 
 **Details**:
+- Reviewed all sections of `README.md` and double-checked my starter vs. final verification outputs
+- Filled in the student information table, development log entries, reflection answers, and technical answers in `MY_WORK.md`
+- Committed and pushed the documentation updates
 
-**Challenges**:
+**Challenges**: Structuring clear step-by-step timelines for the race conditions observed in the starter output
 
-**Solution**:
+**Solution**: Compared the expected values calculated from my seed (`444051957`) against the mismatched observed counts from my saved starter run
 
-**Time spent**:
-
----
-
-### Entry 4 - [Date and Time]
-**What I did**:
-
-**Details**:
-
-**Challenges**:
-
-**Solution**:
-
-**Time spent**:
-
----
-
-### Entry 5 - [Date and Time]
-**What I did**:
-
-**Details**:
-
-**Challenges**:
-
-**Solution**:
-
-**Time spent**:
-
----
-
-### Entry 6 - [Optional - Date and Time]
-**What I did**:
-
-**Details**:
-
-**Challenges**:
-
-**Solution**:
-
-**Time spent**:
+**Time spent**: 1 hour
 
 ---
 
 ## Development Log Summary
 
-> 💡 **TIP:** Fill this in **last**, after all entries are written.
+**Total time spent on assignment**: 4 hours 30 minutes
 
-**Total time spent on assignment**: [X hours]
+**Most challenging part**: Designing a clean shutdown mechanism for the `CpuWorker` threads in Feature 3 so they would not remain blocked indefinitely on `Semaphore.acquire()` after all processes finished.
 
-**Most challenging part**:
+**Most interesting learning**: Seeing how a tiny 1ms pause (`RaceWindow.pause()`) between reading and writing a shared variable reliably exposes lost updates and corrupted queue states that normally happen randomly in real operating systems.
 
-**Most interesting learning**:
-
-**What I would do differently next time**:
+**What I would do differently next time**: I would sketch out the semaphore permit lifecycle (initial permits, releases per enqueue, and final shutdown releases) on paper before writing the `CpuWorker` loop to avoid the initial termination hang.
 
 ---
 
 # Part B: Reflection (0.5 mark)
 
-> 🛑 **STOP:** Do **not** start this part until you have read the `README.md`, read the **entire** `SchedulerSimulationSync.java`, run it, and finished the three features.
->
-> ⚠️ **WARNING:** Each answer must be **5 to 7 sentences**, in **your own words**. Copied or AI-generated answers without understanding get **0 marks for the whole assignment**. You may be asked to explain them in person.
->
-> 💡 **TIP:** Mention concrete things you actually did: a method you wrote, an error you hit, a line of output you saw. Generic answers score low.
->
-> 💡 **TIP:** Draft your answer in a few bullet points first, then turn them into sentences.
-
 ## Question 1: What did you learn about synchronization?
-
-> 💡 **TIP:** Talk about race conditions (read-modify-write), critical sections, mutual exclusion with `ReentrantLock` and `try/finally`, the role of a counting semaphore, and what surprised you when the starter failed.
 
 **Your Answer:** *(5-7 sentences)*
 
-[Write your answer here.]
+Through this assignment, I learned how easily concurrent threads corrupt shared data when read-modify-write operations are not atomic. In the un-synchronized starter code, `RaceWindow.pause()` exposed how two CPUs could read the same value from `contextSwitchCount` or `ReadyQueue.list` before either thread wrote its update back. Using `ReentrantLock` with `try/finally` blocks taught me how mutual exclusion enforces that only one thread enters a critical section at a time while guaranteeing lock release even if an exception occurs. I also learned the difference between mutual exclusion locks and signaling mechanisms like a counting `Semaphore`, which coordinates producer-consumer execution without wasting CPU cycles. Seeing the verification block fail repeatedly before synchronization and pass consistently with `✔` after adding locks and a semaphore made these operating system concepts concrete.
 
 ## Question 2: What was the most challenging part of this assignment?
 
-> 💡 **TIP:** Pick **one** specific challenge (understanding why the starter failed, choosing the lock granularity, the initial value of the semaphore, the shutdown of the CPUs, Git, the video) and say *why* it was hard.
-
 **Your Answer:** *(5-7 sentences)*
 
-[Write your answer here.]
+The most challenging part of this assignment was implementing a clean termination for the `CpuWorker` threads when replacing busy waiting with a counting `Semaphore` in Feature 3. Initially, replacing the polling loop with `availableProcesses.acquire()` successfully reduced `busyWaitPolls` to zero, but the program timed out and triggered the watchdog at the end. This happened because once the final process finished executing, the remaining idle CPU threads stayed blocked inside `acquire()` waiting for permits that would never arrive. Solving this required carefully checking `SharedStats.getCompletedProcessCount() >= SharedStats.totalProcesses` right after a process finished and calling `release(SharedStats.totalCPUs)` to wake every sleeping CPU. Additionally, placing a second completion check immediately after `acquire()` ensured that awakened CPUs exited the loop cleanly instead of polling an empty queue.
 
 ## Question 3: How did you overcome the challenges you faced?
 
-> 💡 **TIP:** Describe your method: reading the slides and the documentation, adding `System.out.println` to debug, running the program many times, re-reading the README, testing after each small change, asking for help.
-
 **Your Answer:** *(5-7 sentences)*
 
-[Write your answer here.]
+To overcome these challenges, I followed an incremental approach by implementing and testing one feature at a time rather than changing everything at once. First, I read `SchedulerSimulationSync.java` from top to bottom and traced where `RaceWindow.pause()` was placed inside `SharedStats` and `ReadyQueue` to identify every critical section. Whenever a run behaved unexpectedly—such as the threads hanging on the semaphore—I traced the exact number of `release()` and `acquire()` calls across `main`, `ReadyQueue.add()`, and `CpuWorker.run()`. Running the simulation five consecutive times after each feature helped me verify that my fixes worked deterministically rather than by luck. Finally, keeping separate commits for each step made it easy to isolate bugs and confirm that each synchronization mechanism solved its specific problem.
 
 ## Question 4: Where can synchronization concepts be applied in real-world applications?
 
-> 💡 **TIP:** Use real applications you know (banking and money transfers, ticket or seat booking, a shared counter on a website, a print queue, a database) and connect each one to what you built here (shared data, critical section, lock or semaphore).
-
 **Your Answer:** *(5-7 sentences)*
 
-[Write your answer here.]
+Synchronization concepts like mutex locks and semaphores are essential in almost every multi-user real-world software system. For example, in an online banking application, two simultaneous transfers from the same account form a read-modify-write critical section on the account balance that must be protected by a mutex lock to prevent lost updates. Similarly, airline or concert ticket booking platforms use locks to ensure that two customers cannot reserve the exact same last seat at the same time. Counting semaphores are widely used in database connection pools and web servers to limit how many worker threads can access a fixed number of database connections simultaneously, blocking excess requests instead of busy waiting. Even background print spoolers and operating system task schedulers rely on the exact producer-consumer queue synchronization built in this assignment.
 
 ### Optional: What would you like to learn more about?
 
-[Any topics related to synchronization or operating systems that you're curious about?]
+I would like to learn more about lock-free data structures and Java's `java.util.concurrent` atomic classes (such as `AtomicInteger` and `ConcurrentLinkedQueue`) and how they compare in performance to `ReentrantLock`.
 
 ### Optional: How confident do you feel about synchronization concepts now?
 
-[Beginner / Intermediate / Confident. What do you understand well? What needs more practice?]
+Intermediate to Confident. I now have a solid understanding of identifying critical sections, applying `ReentrantLock` with `try/finally`, and coordinating threads with semaphores, though I want more practice debugging complex multi-lock deadlock scenarios.
 
 ### Optional: Feedback on the assignment
 
-[Any comments? Was it helpful? Too easy or hard? Suggestions?]
+The built-in `RaceWindow.pause()` and `VERIFICATION` summary table were very helpful because they made concurrency bugs reproducible and immediately showed whether each fix worked.
 
 ---
+
+# Part C: Technical Answers (0.5 mark)
+
+## Question 1: Race Condition in Your Own Output
+
+**Your Answer:** *(3-5 sentences)*
+
+In the original starter run with my student ID (`444051957`), multiple shared counters suffered from lost updates because `RaceWindow.pause()` forced a context switch between reading and writing the variables. Specifically, `Context switches`, `Completed processes`, and `Total service time` all showed `✘ MISMATCH` because observed values were lower than expected, and `Busy-waiting polls` was far above zero. On a real machine without `RaceWindow`, the exact same race condition still happens whenever the OS hardware timer preempts a thread during the nanosecond window between reading a variable from memory into a register and writing the incremented result back, making it rare and very hard to reproduce during testing.
+
+Verification block of the **original starter**:
 
 # Part C: Technical Answers (0.5 mark)
 
