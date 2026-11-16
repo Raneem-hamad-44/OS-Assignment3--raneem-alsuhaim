@@ -42,7 +42,7 @@
 
 ## 🎥 Video Link
 
-**Video Link**: [Paste your video link here]
+**Video Link**: [(https://drive.google.com/file/d/1sf9Lktb-CJtbSwKTEPOWF-y7rbay9VMy/view?usp=drive_link)]
 
 > ⚠️ **WARNING:** The video must be **publicly accessible** ("Anyone with the link can view") on **Google Drive**, **YouTube (Unlisted or Public)** or any other cloud file-sharing system. A private, restricted or broken link counts as a **missing video (-1 mark)**.
 >
@@ -375,6 +375,7 @@ A deadlock occurs if a producer acquires `mutex` before calling `empty.acquire()
 - [ ] 2-3 minutes long, named `444051957_Assignment3_Demo.mp4`
 - [ ] Shows your name, ID, repository, 3 features (and your lock granularity choice), IDE execution with the verification block, one synchronization concept, and commit history
 - [ ] Link is **public** (tested in an incognito window) and pasted in the **Video Link** section above
+- [ ] 
 
 **Blackboard**
 - [ ] Submit **only** the link to your public GitHub repositorygularly, and make sure you can explain every line you submit.
