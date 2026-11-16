@@ -116,6 +116,7 @@ class SharedStats {
 }
 
 // ⚠️ THE READY QUEUE: shared by ALL the CPU threads ⚠️
+// ⚠️ THE READY QUEUE: shared by ALL the CPU threads ⚠️
 class ReadyQueue {
     private final LinkedList<Thread> list = new LinkedList<>();
     private final Map<Thread, Process> map = new HashMap<>();
@@ -123,7 +124,8 @@ class ReadyQueue {
     // Feature 1: Lock protecting `list` and `map`
     private final ReentrantLock queueLock = new ReentrantLock();
 
-    // TODO Feature 3: declare the counting semaphore here
+    // Feature 3: Counting semaphore tracking available processes
+    private final Semaphore availableProcesses = new Semaphore(0);
 
     public void add(Process process) {
         queueLock.lock();
@@ -139,6 +141,16 @@ class ReadyQueue {
         } finally {
             queueLock.unlock();
         }
+        // Signal that one more process is available
+        availableProcesses.release();
+    }
+
+    public void waitForProcess() throws InterruptedException {
+        availableProcesses.acquire();
+    }
+
+    public void wakeAllCpus(int numCpus) {
+        availableProcesses.release(numCpus);
     }
 
     public Thread poll() {
@@ -179,7 +191,6 @@ class ReadyQueue {
         }
     }
 }
-
 class Process implements Runnable {
     private final String name;
     private final int burstTime;
