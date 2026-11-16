@@ -123,8 +123,7 @@ class ReadyQueue {
     // Feature 1: Lock protecting `list` and `map`
     private final ReentrantLock queueLock = new ReentrantLock();
 
-    // Feature 3: Counting semaphore tracking available processes in the ready queue
-    private final Semaphore availableProcesses = new Semaphore(0);
+    // TODO Feature 3: declare the counting semaphore here
 
     public void add(Process process) {
         queueLock.lock();
@@ -140,18 +139,6 @@ class ReadyQueue {
         } finally {
             queueLock.unlock();
         }
-        // Feature 3: Signal that one more process is available
-        availableProcesses.release();
-    }
-
-    // Feature 3: Block until a process is available (or woken up at simulation end)
-    public void waitForProcess() throws InterruptedException {
-        availableProcesses.acquire();
-    }
-
-    // Feature 3: Wake up all waiting CPUs when all processes have completed
-    public void wakeAllCpus(int numCpus) {
-        availableProcesses.release(numCpus);
     }
 
     public Thread poll() {
